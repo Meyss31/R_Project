@@ -1,24 +1,25 @@
 library(readr)
+library(sf)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
 appearances = read_csv('data/appearances.csv')
 characters = read_csv('data/characters.csv')
 scenes = read_csv('data/scenes.csv')
 episodes = read_csv('data/episodes.csv')
 populations = read_csv('data/populations.csv')
-library(sf)
-library(tidyr)
 locations=st_read("./data/GoTRelease/Locations.shp",crs=4326)
 
 
 #nbdeath par sex
-library(dplyr)
-library(ggplot)
 char_sex = characters %>% 
   select(sex, killedBy) %>% 
+  group_by(sex)%>% 
+  summarize(death_per_sex=n())%>%
   na.omit()
-ggplot(data = char_sex)+ 
-  geom_bar(aes(x=sex))+ 
-  scale_x_discrete("Sex")
-
+ggplot(char_sex, aes(x="", y=death_per_sex, fill=sex)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0)
 
 #nbdeath par house
 
@@ -98,4 +99,5 @@ db = death_char %>% left_join(char) %>%filter(!is.na(nameC))
 ggplot(data=db)+
   geom_boxplot(aes(x=nameC,y=dur_Car, fill=factor(seasonNum)))+
   scale_x_discrete("Characters Mortes")
+
 
