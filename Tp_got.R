@@ -77,3 +77,22 @@ ggplot(death_episode,aes(x=duration_epi/60,y=nbe,col=factor(episodeNum)))+
   scale_color_brewer("Episode",palette ="Spectral")+
   guides(colour = "legend", size = "legend")+
   theme_bw()
+
+#Death per appearance
+death_char =  scenes%>% 
+  left_join(appearances) %>%
+  left_join(characters) %>%filter(!is.na(killedBy)) %>% 
+  left_join(episodes) %>%filter(seasonNum=="1") %>% 
+  group_by(seasonNum, episodeNum, name)%>% 
+  summarize(dur_Car=sum(duration)) %>% 
+  arrange(desc(dur_Car))
+char = death_char %>% group_by(seasonNum, name)%>%
+  summarize(dur_seas=sum(dur_Car))%>%
+  filter(dur_seas>60*45) %>% 
+  arrange(dur_seas)%>%
+  mutate(nameC=factor(name,levels = name))
+db = death_char %>% left_join(char) %>%filter(!is.na(nameC))
+ggplot(data=db)+
+  geom_boxplot(aes(x=nameC,y=dur_Car, fill=factor(seasonNum)))+
+  scale_x_discrete("Characters Mortes")
+
