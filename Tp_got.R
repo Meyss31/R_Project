@@ -63,3 +63,17 @@ ggplot(data=deaths)+
   scale_x_continuous("season", breaks =seq(1,8, by=1), limits =c(1,8), expand=c(0,1))+
   scale_y_continuous("deaths")
 
+
+#Death par episode
+death_episode=scenes%>%
+  left_join(episodes) %>%filter(seasonNum==1)%>% 
+  group_by(episodeTitle, episodeNum) %>% 
+  summarize(nbe=sum(nbdeath), duration_epi=sum(duration))
+ggplot(death_episode,aes(x=duration_epi/60,y=nbe,col=factor(episodeNum)))+
+  geom_point(aes(size=nbe))+
+  geom_text(data=death_episode,aes(label=episodeTitle),vjust=-0.6)+
+  scale_x_continuous("Durée de l'épisode",seq (50, 65, by=3), limits = c(50,65))+
+  scale_y_continuous("Nombre des morts",limits = c(0,8))+
+  scale_color_brewer("Episode",palette ="Spectral")+
+  guides(colour = "legend", size = "legend")+
+  theme_bw()
