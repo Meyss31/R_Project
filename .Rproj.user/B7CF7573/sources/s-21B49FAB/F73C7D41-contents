@@ -87,23 +87,3 @@ ggplot(data = df)+
   scale_x_continuous("deaths", breaks = seq(0,100,by=25),limits = c(0,100),expand = c(0,1))+ 
   scale_y_discrete("season")
 
-
-screenTimePerSeasons = appearances %>% left_join(scenes) %>% 
-  left_join(episodes) %>% 
-  group_by(name,seasonNum) %>% 
-  summarise(screenTime=sum(duration)) %>% 
-  arrange(desc(screenTime)) 
-screenTimeTotal = screenTimePerSeasons %>% 
-  group_by(name) %>% 
-  summarise(screenTimeTotal=sum(screenTime))
-mainCharacters = screenTimeTotal %>% 
-  filter(screenTimeTotal>60*60) %>% 
-  arrange(screenTimeTotal) %>% 
-  mutate(nameF=factor(name,levels = name))
-data = screenTimePerSeasons %>% left_join(mainCharacters) %>% filter(!is.na(nameF))
-ggplot(data)+
-  geom_bar(aes(y=nameF,x=screenTime/60,fill=factor(seasonNum,level=8:1)),stat="identity")+
-  scale_fill_brewer("Saison",palette = "Spectral")+theme_bw()+
-  geom_text(data=mainCharacters,aes(y=nameF,x=screenTimeTotal/60+5,label=paste(round(screenTimeTotal/60),'min')),hjust = "left")+
-  scale_x_continuous("Temps d'apparition (min)",breaks = seq(0,750,by=120),limits = c(0,780),expand = c(0,1))+
-  ylab("")+ggtitle("Temps d'apparition cumulé par personnage et saison")
