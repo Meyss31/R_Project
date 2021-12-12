@@ -4,6 +4,9 @@ characters = read_csv('data/characters.csv')
 scenes = read_csv('data/scenes.csv')
 episodes = read_csv('data/episodes.csv')
 populations = read_csv('data/populations.csv')
+library(sf)
+library(tidyr)
+locations=st_read("./data/GoTRelease/Locations.shp",crs=4326)
 
 
 #nbdeath par sex
