@@ -1,0 +1,13 @@
+name: R_Project
+title: R_Project
+username:
+account: yahya
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5320778
+bundleId: 5368122
+url: https://yahya.shinyapps.io/R_Project/
+when: 1639425944.76647
+lastSyncTime: 1639425944.76648
+asMultiple: FALSE
+asStatic: FALSE

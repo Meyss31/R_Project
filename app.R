@@ -14,6 +14,21 @@ library(ggplot2)
 ui <- navbarPage(
     "GOT Visualisation",
     tabPanel(
+        "Landing page",
+        sidebarLayout(
+            sidebarPanel(
+                radioButtons(
+                    inputId = "killer",
+                    label = "Select killer",
+                    choices = top_killers$killedBy
+                )
+            ),
+            mainPanel(
+                # img(src = "../images/hot1.jpg", height = 72, width = 72)
+            )
+        )
+    ),
+    tabPanel(
         "Killers",
         sidebarLayout(
             sidebarPanel(
@@ -32,6 +47,21 @@ ui <- navbarPage(
     ),
     tabPanel(
         "Static visualisation",
+        sidebarLayout(
+            sidebarPanel(
+                h3(
+                    "Total number of death on the serie, distributed by season"
+                ),
+                p(
+                    "this histogram shows the total number of evry"
+                )
+            ),
+            mainPanel(
+                plotOutput(
+                    outputId = "sex"
+                )
+            )
+        ),
         sidebarLayout(
             sidebarPanel(
                 h3(
@@ -119,6 +149,18 @@ ui <- navbarPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+    output$sex <- renderPlot(
+        {
+            char_sex = characters %>% 
+                select(sex, killedBy) %>% 
+                group_by(sex)%>% 
+                summarize(death_per_sex=n())%>%
+                na.omit()
+            ggplot(char_sex, aes(x="", y=death_per_sex, fill=sex)) +
+                geom_bar(stat="identity", width=1) +
+                coord_polar("y", start=0)
+        }
+    )
     output$killed <- renderDataTable(
         {
             killers  %>% filter(killedBy == input$killer) %>% select(name)
