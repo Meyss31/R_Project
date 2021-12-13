@@ -9,4 +9,4 @@ scenes = read.csv("data/scenes.csv")
 seine_maritime = read.csv("data/data_seine_maritime.csv")
 
 
-killers = characters %>% select(name, killedBy) %>% na.omit()
+killers_data = characters %>% select(name, killedBy) %>% na.omit()

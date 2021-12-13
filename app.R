@@ -6,9 +6,10 @@
 #
 #    http://shiny.rstudio.com/
 #
-top_killers = killers %>% group_by(killedBy) %>% summarise(nb =n()) %>% arrange(desc(nb)) %>% head(10)
+top_killers_data = killers_data %>% group_by(killedBy) %>% summarise(nb =n()) %>% arrange(desc(nb)) %>% head(10)
 library(shiny)
 library(ggplot2)
+library(fmsb)
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
@@ -20,7 +21,7 @@ ui <- navbarPage(
                 radioButtons(
                     inputId = "killer",
                     label = "Select killer",
-                    choices = top_killers$killedBy
+                    choices = top_killers_data$killedBy
                 )
             ),
             mainPanel(
@@ -65,21 +66,6 @@ ui <- navbarPage(
         sidebarLayout(
             sidebarPanel(
                 h3(
-                    "Total number of death on the serie, distributed by season"
-                ),
-                p(
-                    "this histogram shows the total number of evry"
-                )
-            ),
-            mainPanel(
-                plotOutput(
-                    outputId = "seas_epi_death"
-                )
-            )
-        ),
-        sidebarLayout(
-            sidebarPanel(
-                h3(
                     "Total number of death per hous"
                 ),
                 p(
@@ -89,6 +75,21 @@ ui <- navbarPage(
             mainPanel(
                 plotOutput(
                     outputId =  "houses"
+                )
+            )
+        ),
+        sidebarLayout(
+            sidebarPanel(
+                h3(
+                    "Total number of death on the serie, distributed by season"
+                ),
+                p(
+                    "this histogram shows the total number of evry"
+                )
+            ),
+            mainPanel(
+                plotOutput(
+                    outputId = "seas_epi_death"
                 )
             )
         )
@@ -151,52 +152,66 @@ ui <- navbarPage(
 server <- function(input, output) {
     output$sex <- renderPlot(
         {
-            char_sex = characters %>% 
-                select(sex, killedBy) %>% 
-                group_by(sex)%>% 
-                summarize(death_per_sex=n())%>%
-                na.omit()
-            ggplot(char_sex, aes(x="", y=death_per_sex, fill=sex)) +
-                geom_bar(stat="identity", width=1) +
-                coord_polar("y", start=0)
-        }
-    )
-    output$killed <- renderDataTable(
-        {
-            killers  %>% filter(killedBy == input$killer) %>% select(name)
+            #Créer un dataframe des plus grands meurterieux de la série
+            top_killers = characters %>% 
+                group_by(killedBy) %>% filter(!is.na(killedBy)) %>% 
+                summarise(nb =n()) %>% 
+                arrange(desc(nb)) %>% 
+                head(5)
+            #Créer un dataframe des houses le plus touchés par la mort
+            top_houses_killed=characters %>% filter(!is.na(killedBy)) %>%filter(!is.na(house))%>%
+                group_by(house) %>% 
+                summarize(nbk=n()) %>% arrange(desc(nbk)) %>% head(5)
+            #Créer un dataframe des meurterieux et des houses le plus touchés par la mort
+            killers=top_killers %>% 
+                left_join(characters) %>% filter(!is.na(killedBy)) %>% filter(!is.na(house))%>%
+                left_join(top_houses_killed) %>% 
+                group_by (killedBy, house)  %>%
+                summarize(nbk=n())
+            killers=pivot_wider(killers,names_from=house,values_from=nbk)
+            killers[is.na(killers)]=0
+            killers=killers%>% select(Stark,Lannister,Dothraki,`Gard Royal`,'Night Gard')
+            killers=killers %>% filter(killedBy=='Jon Snow')
+            dt=subset(killers, select = -c(killedBy))
+            colnames(dt) <- c('Stark','Lannister','Dothraki','`Gard Royal`','Night Gard')
+            rownames(dt) <- c('Jon Snow')
+            dt = rbind(rep(7,5) , rep(0,5) , dt)
+            colors_border=c( rgb(0.2,0.5,0.5,0.5), rgb(0.8,0.2,0.5,0.5) , rgb(0.7,0.5,0.1,0.5), rgb(1,0.7,0.8,0.5), rgb(0.5,0,0.5,0.5) )
+            colors_in=c( rgb(0.2,0.5,0.5,0.4), rgb(0.8,0.2,0.5,0.5) , rgb(0.7,0.5,0.1,0.5), rgb(1,0.7,0.8,0.5), rgb(0.5,0,0.5,0.5) )
+            radarchart( dt  , axistype=1 , 
+                        pcol=colors_border , pfcol=colors_in , plwd=4 , plty=1,
+                        cglcol="blue", cglty=1, axislabcol="blue", caxislabels=seq(0,8,2), cglwd=0.8,
+                        vlcex=0.8)
+            legend(x=1.6, y=1, legend = 'Jon Snow', bty = "n", pch=20 , col=colors_in , text.col = "grey", cex=1.2, pt.cex=5)
         }
     )
     output$seasons <- renderPlot(
         {
-            dat = episodes %>% select(episodeId, seasonNum, episodeNum) %>% 
-                left_join(scenes %>% select(episodeId, nbdeath)) %>%
-                filter(seasonNum == input$season)  %>%
-                group_by(episodeNum) %>% summarise(ttDeath= sum(nbdeath))
-            ggplot(
-                data = dat,
-                aes(
-                    x = factor(episodeNum),
-                    y = ttDeath
-                )
-            ) + geom_bar(stat="identity") +
-                labs(
-                    x = "Episodes",
-                    y = "Total number of death",
-                    title = "Variation of number of death for each season"
-                )
+            #Créer un dataframe des morts dans la série par saison
+            deaths_in_serie = scenes %>% 
+                left_join(episodes) %>% 
+                group_by(seasonNum) %>% 
+                summarize(nbd_in_serie=sum(nbdeath))
+            #Construire le lineplot montrant l'évolution de la mort dans la série
+            ggplot(data=deaths_in_serie)+
+                geom_line(aes(x=seasonNum, y=nbd_in_serie), stat='identity')+
+                scale_x_continuous("Season", breaks =seq(1,8, by=1), limits =c(1,8), expand=c(0,1))+
+                scale_y_continuous("Deaths")
         }
     )
     output$houses <- renderPlot(
         {
+            #Créer une dataframe des morts par house
+            
             char_house = characters %>% 
                 select(house, killedBy) %>% 
                 na.omit() %>% group_by(house) %>% 
-                summarise(nb=n()) 
-            char_house_ordered = char_house %>% 
-                arrange(desc(nb)) %>% 
-                mutate(house=factor(house,levels=house))
-            ggplot(data = char_house_ordered)+ 
-                geom_bar(aes(x=house, y=nb), stat='identity')+ 
+                summarise(nbd_by_house=n())%>%
+                arrange(desc(nbd_by_house)) %>% 
+                mutate(house=factor(house,levels=house)) #ordonner le dataframe par nombre de morts cummulé par house 
+            #Construire le barplot mobtrant la mort par house
+            ggplot(data = char_house)+ 
+                geom_bar(aes(x=house, y=nbd_by_house), stat='identity')+ 
                 scale_x_discrete("house")+ 
                 scale_y_continuous("deaths")
         }
